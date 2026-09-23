@@ -1,0 +1,18 @@
+{
+  "name": "mergecomplete",
+  "owner": {
+    "name": "mergecomplete",
+    "url": "https://mergecomplete.com"
+  },
+  "description": "Review what your agent changed",
+  "plugins": [
+    {
+      "name": "mergecomplete",
+      "source": "./",
+      "version": "1.0.0",
+      "description": "Ask your agent for a review of the work it just did: what changed, what's risky, and a link to read it. Made on your own machine, on the Claude plan you already pay for.",
+      "category": "development",
+      "homepage": "https://docs.mergecomplete.com"
+    }
+  ]
+}

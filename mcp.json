@@ -1,0 +1,10 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+  "mcpServers": {
+    "mergecomplete": {
+      "type": "stdio",
+      "command": "./bin/mergecomplete-mcp",
+      "args": []
+    }
+  }
+}

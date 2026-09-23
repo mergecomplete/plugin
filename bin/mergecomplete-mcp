@@ -1,0 +1,342 @@
+#!/bin/sh
+# The plugin's server: finds the mergecomplete runner, or installs it, and
+# runs `mergecomplete mcp`, whose tools the skills use.
+#
+# 1. A runner with the review tools, on PATH or in ~/.local/bin, where the
+#    install script puts it, is started at once. It's upgraded in the
+#    background, as review, add and scan upgrade it, so the next start runs
+#    the build the app serves, unless MERGECOMPLETE_AUTO_UPDATE=0 pins it.
+# 2. Otherwise the runner is installed into ~/.local/bin by the app's own
+#    install script, the one the website's install command runs, which checks
+#    the download against the checksum the app published. From production,
+#    the launcher also compares that checksum with the one published for the
+#    release at github.com/mergecomplete/releases, which the app doesn't
+#    serve, and puts the runner in place only when the two agree.
+# 3. A runner older than the review tools is upgraded once, with
+#    `mergecomplete upgrade`, unless MERGECOMPLETE_AUTO_UPDATE=0 pins it.
+#
+# Steps 2 and 3 download, which can take longer than an agent waits for a
+# server to start: Codex gives it ten seconds. So while they run, the launcher
+# answers the agent itself (the bridge, below): it starts the session and
+# lists the tools as the runner would, and when the agent first calls a tool,
+# it waits for the runner and hands the connection to it.
+#
+# Installing the plugin is the person saying yes to running the runner, so
+# this asks nothing. It says what it installed, and where, on standard error,
+# which the agents show in their MCP logs. Standard output is the MCP
+# protocol, so nothing else is ever written there.
+#
+# When no runner can be started, it serves fallback/server.awk instead: the
+# same five tools, each answering why, so the agent can tell the person and
+# nothing fails without a reason. Windows never runs this file: the agents
+# start bin/mergecomplete-mcp.exe there (fallback/main.go).
+#
+# MERGECOMPLETE_URL points it, and the runner, at another app, such as a local
+# stack; MERGECOMPLETE_BIN_DIR installs somewhere other than ~/.local/bin. Both
+# are the install script's own.
+
+set -u
+
+root=$(cd "$(dirname "$0")/.." && pwd -P)
+# The app an install comes from. The runner picks its own app, as it does in a
+# terminal: MERGECOMPLETE_URL when it's set, and otherwise the one it logged in
+# to, so the launcher never passes this on.
+PRODUCTION="https://app.mergecomplete.com"
+URL="${MERGECOMPLETE_URL:-$PRODUCTION}"
+URL="${URL%/}"
+
+# Where each of production's releases has its checksums published.
+RELEASES="https://raw.githubusercontent.com/mergecomplete/releases/HEAD/releases"
+
+log() { printf 'mergecomplete-mcp: %s\n' "$*" >&2; }
+
+# Serve the tools with the reason every call answers, and exit when the agent
+# closes the connection.
+serve_reason() {
+	log "$1"
+	MC_REASON=$1 MC_TOOLS="$root/fallback/tools.json" exec awk -f "$root/fallback/server.awk"
+}
+
+case "$(uname -s)" in
+Darwin) os=darwin ;;
+Linux) os=linux ;;
+MINGW* | MSYS* | CYGWIN* | Windows*)
+	serve_reason "There's no runner for Windows yet: the runner is built for macOS and Linux, so no review can be made on this machine. On Windows, the Linux build runs inside WSL: run the agent inside WSL, and the plugin installs the runner there and these tools work. Calling a tool again here gives the same answer."
+	;;
+*)
+	serve_reason "There's no runner for this machine yet: it runs $(uname -s), and the runner is built for macOS and Linux, so no review can be made here. Calling a tool again gives the same answer."
+	;;
+esac
+
+case "$(uname -m)" in
+arm64 | aarch64) arch=arm64 ;;
+x86_64 | amd64) arch=amd64 ;;
+*)
+	serve_reason "There's no runner for this machine yet: it's $(uname -m), and the runner is built for arm64 and x86_64, so no review can be made here. Calling a tool again gives the same answer."
+	;;
+esac
+
+if [ -z "${HOME:-}" ]; then
+	serve_reason "The plugin couldn't start the runner: the agent started it with no HOME set, and the runner keeps its connection and settings in the home directory. Starting the agent from a login shell sets it."
+fi
+BIN_DIR="${MERGECOMPLETE_BIN_DIR:-$HOME/.local/bin}"
+
+# The last line a failed step wrote, without the runner's own prefix.
+last_line() {
+	sed -e '/^[[:space:]]*$/d' -e 's/^mergecomplete: //' "$1" 2>/dev/null | tail -n 1
+}
+
+fetch() {
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL --connect-timeout 15 --max-time 300 -o "$2" "$1"
+	elif command -v wget >/dev/null 2>&1; then
+		wget -q -T 60 -O "$2" "$1"
+	else
+		return 127
+	fi
+}
+
+sha256() {
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum "$1" | cut -d ' ' -f 1
+	else
+		shasum -a 256 "$1" | cut -d ' ' -f 1
+	fi
+}
+
+# Runs a command in a session of its own, with no terminal. The install script
+# connects the runner when it can open /dev/tty, which would put a device login
+# in front of the agent's server; without a terminal it installs and stops.
+detached() {
+	if command -v setsid >/dev/null 2>&1; then
+		setsid "$@"
+	elif command -v perl >/dev/null 2>&1; then
+		perl -MPOSIX -e 'POSIX::setsid(); exec @ARGV or exit 127' -- "$@"
+	elif command -v python3 >/dev/null 2>&1; then
+		python3 -c 'import os, sys; os.setsid(); os.execvp(sys.argv[1], sys.argv[1:])' "$@"
+	else
+		"$@"
+	fi
+}
+
+# Whether MERGECOMPLETE_AUTO_UPDATE pins the runner, as the runner reads it.
+pinned() {
+	case "${MERGECOMPLETE_AUTO_UPDATE:-}" in
+	0 | [Ff][Aa][Ll][Ss][Ee] | [Oo][Ff][Ff]) return 0 ;;
+	esac
+	return 1
+}
+
+find_runner() {
+	found=$(command -v mergecomplete 2>/dev/null) || found=""
+	case "$found" in
+	/*) [ -x "$found" ] && {
+		printf '%s\n' "$found"
+		return 0
+	} ;;
+	esac
+	if [ -x "$BIN_DIR/mergecomplete" ]; then
+		printf '%s\n' "$BIN_DIR/mergecomplete"
+		return 0
+	fi
+	return 1
+}
+
+# The version a runner reports, from `version --json`.
+version_of() {
+	"$1" version --json </dev/null 2>/dev/null | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+}
+
+# Whether this runner has the review tools. A runner from before them answers
+# `mcp` as an unknown command.
+has_mcp() {
+	"$1" mcp -h </dev/null >/dev/null 2>&1
+}
+
+# ---- Getting a runner, in the background ------------------------------------
+#
+# prepare runs in a subshell of its own while the bridge answers the agent. It
+# leaves the runner's path in $state/runner, or the reason there's none in
+# $state/reason, and says what it did on standard error.
+
+# give_up ends prepare with the reason every tool answers, which the fallback
+# logs when it starts.
+give_up() {
+	printf '%s\n' "$1" >"$state/reason"
+	exit 1
+}
+
+# Installs the runner into BIN_DIR, or gives up with the reason it couldn't.
+# The install script puts it in a directory of its own beside BIN_DIR first,
+# so nothing lands where the person runs it from until both checks pass, and
+# putting it in place is a rename.
+install_runner() {
+	if ! mkdir -p "$BIN_DIR" 2>/dev/null || ! work=$(mktemp -d "$BIN_DIR/.mergecomplete-plugin.XXXXXX" 2>/dev/null); then
+		give_up "There's no runner on this machine, and the plugin couldn't install one: it can't write to $BIN_DIR. The plugin tries again when the agent next starts it."
+	fi
+	trap 'rm -rf "$work"' EXIT
+
+	log "No runner on this machine, so installing it into $BIN_DIR from $URL."
+	fetch "$URL/api/runner/install.sh" "$work/install.sh" 2>"$work/err"
+	fetched=$?
+	if [ $fetched -ne 0 ]; then
+		if [ $fetched -eq 127 ]; then
+			give_up "There's no runner on this machine, and the plugin couldn't install one: that takes curl or wget, and neither is installed."
+		fi
+		cat "$work/err" >&2
+		detail=$(last_line "$work/err")
+		give_up "There's no runner on this machine, and the plugin couldn't install one: it couldn't download the install script from $URL${detail:+ ($detail)}. The plugin tries again when the agent next starts it."
+	fi
+
+	# Standard input is closed, and a token in the environment is left out,
+	# since with one the script connects the runner unattended. Connecting is
+	# the setup skill's, with the person there. What the script says is kept
+	# for when it fails: when it works, its advice is about the directory it
+	# was pointed at, and the line below says what happened.
+	(
+		unset MERGECOMPLETE_TOKEN
+		MERGECOMPLETE_BIN_DIR="$work" MERGECOMPLETE_URL="$URL" detached sh "$work/install.sh"
+	) </dev/null >"$work/err" 2>&1
+	code=$?
+	if [ $code -ne 0 ] || [ ! -x "$work/mergecomplete" ]; then
+		cat "$work/err" >&2
+		detail=$(last_line "$work/err")
+		if [ $code -eq 71 ]; then
+			give_up "There's no runner for this machine yet${detail:+: $detail}. No review can be made here, and calling a tool again gives the same answer."
+		fi
+		give_up "There's no runner on this machine, and installing it from $URL didn't work${detail:+: $detail}. The plugin tries again when the agent next starts it."
+	fi
+
+	version=$(version_of "$work/mergecomplete")
+	sum=$(sha256 "$work/mergecomplete")
+	if [ "$URL" != "$PRODUCTION" ]; then
+		checked="The checksum $URL published matches; github.com/mergecomplete/releases holds production's releases only, so it wasn't compared there."
+	elif [ -n "$version" ] && fetch "$RELEASES/$version.json" "$work/release.json" 2>/dev/null; then
+		if tr -d '\\[:space:]' <"$work/release.json" | grep -q "\"$os-$arch\":{\"sha256\":\"$sum\"}"; then
+			checked="The checksum the app published matches the one published for release $version at github.com/mergecomplete/releases."
+		else
+			give_up "There's no runner on this machine, and the plugin didn't install the one $URL served: its checksum doesn't match the one published for release $version at github.com/mergecomplete/releases, so nothing was installed. The plugin tries again when the agent next starts it."
+		fi
+	else
+		checked="The checksum the app published matches; github.com/mergecomplete/releases has no release ${version:-of it} to compare it with."
+	fi
+
+	if ! mv -f "$work/mergecomplete" "$BIN_DIR/mergecomplete"; then
+		give_up "There's no runner on this machine, and the plugin couldn't put the one it downloaded in $BIN_DIR. The plugin tries again when the agent next starts it."
+	fi
+	rm -rf "$work"
+	trap - EXIT
+	log "Installed the runner, version ${version:-unknown}, at $BIN_DIR/mergecomplete. $checked It isn't connected yet: the setup skill connects it."
+}
+
+# Upgrades a runner older than the review tools, or gives up with the reason
+# it couldn't.
+upgrade_runner() {
+	version=$(version_of "$1")
+	if pinned; then
+		give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and MERGECOMPLETE_AUTO_UPDATE=0 pins it, so the plugin left it as it is. Upgrading it with mergecomplete upgrade in a terminal brings the tools."
+	fi
+	log "The runner at $1, version ${version:-unknown}, is older than the review tools, so upgrading it."
+	"$1" upgrade </dev/null >"$state/upgrade" 2>&1
+	upgraded=$?
+	cat "$state/upgrade" >&2
+	if ! has_mcp "$1"; then
+		detail=$(last_line "$state/upgrade")
+		if [ $upgraded -eq 0 ]; then
+			give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and the app it comes from has no newer runner with them yet. The plugin checks again when the agent next starts it."
+		fi
+		give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and upgrading it didn't work${detail:+: $detail}. The plugin tries again when the agent next starts it."
+	fi
+	log "Upgraded the runner at $1 to version $(version_of "$1")."
+}
+
+prepare() {
+	runner=$1
+	if [ -z "$runner" ]; then
+		install_runner
+		runner="$BIN_DIR/mergecomplete"
+	fi
+	has_mcp "$runner" || upgrade_runner "$runner"
+	printf '%s\n' "$runner" >"$state/runner"
+}
+
+# ---- The bridge ---------------------------------------------------------------
+#
+# Answers the agent while prepare runs: initialize, ping and tools/list are
+# answered from fallback/, as the runner answers them, one message at a time
+# (server.awk with MC_BRIDGE=1). The first message only the runner can answer,
+# a tool call, waits for prepare. Then the runner is started, reads the
+# agent's initialize and notifications again, and the rest of the connection
+# as it comes; its own answer to initialize, which the agent already has, is
+# dropped. When there's no runner, the fallback answers instead.
+#
+# `read` takes a line at a time from standard input and nothing past it, so
+# what the agent sends next is still there for whichever server takes over.
+
+bridge() {
+	replay=""
+	while IFS= read -r line || [ -n "$line" ]; do
+		answer=$(printf '%s\n' "$line" | MC_BRIDGE=1 MC_TOOLS="$root/fallback/tools.json" MC_INSTRUCTIONS="$root/fallback/instructions.txt" awk -f "$root/fallback/server.awk")
+		kind=$?
+		case $kind in
+		0) printf '%s\n' "$answer" ;;
+		10)
+			printf '%s\n' "$answer"
+			initialized=1
+			replay=$line
+			;;
+		11) replay="$replay${replay:+
+}$line" ;;
+		*) hand_over "$line" ;;
+		esac
+	done
+	# The agent closed the connection before calling a tool. What prepare is
+	# doing carries on, so the next start finds the runner.
+	exit 0
+}
+
+hand_over() {
+	wait "$prepared"
+	if [ -s "$state/runner" ]; then
+		runner=$(cat "$state/runner")
+		rm -rf "$state"
+		{
+			[ -n "$replay" ] && printf '%s\n' "$replay"
+			printf '%s\n' "$1"
+			exec cat
+		} | "$runner" mcp | {
+			[ "$initialized" = 1 ] && { IFS= read -r _ || exit 0; }
+			exec cat
+		}
+		exit
+	fi
+	reason=$(cat "$state/reason" 2>/dev/null) || reason=""
+	[ -n "$reason" ] || reason="There's no runner on this machine, and the plugin couldn't start one. The plugin tries again when the agent next starts it."
+	rm -rf "$state"
+	{
+		printf '%s\n' "$1"
+		exec cat
+	} | serve_reason "$reason"
+	exit
+}
+
+# ---- Starting --------------------------------------------------------------------
+
+runner=$(find_runner) || runner=""
+
+if [ -n "$runner" ] && has_mcp "$runner"; then
+	if ! pinned; then
+		# In a process of its own, which the agent's session doesn't wait on:
+		# the runner in use now carries on, and the next start runs whatever
+		# build this puts in its place.
+		(detached "$runner" upgrade </dev/null >&2 2>&1 &)
+	fi
+	exec "$runner" mcp
+fi
+
+state=$(mktemp -d "${TMPDIR:-/tmp}/mergecomplete-mcp.XXXXXX") ||
+	serve_reason "There's no runner the plugin can start, and it couldn't make a temporary directory to install one from. The plugin tries again when the agent next starts it."
+(prepare "$runner") </dev/null >&2 &
+prepared=$!
+initialized=0
+bridge

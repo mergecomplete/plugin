@@ -1,0 +1,7 @@
+# The launcher and the fallback run under sh and awk, which a carriage return
+# breaks, whatever the checkout's platform.
+bin/mergecomplete-mcp text eol=lf
+*.sh text eol=lf
+*.awk text eol=lf
+*.exe binary
+*.png binary

@@ -1,0 +1,1 @@
+Reviews of code changes, made by the person's own runner on their Claude plan. Ask for one when a piece of work is finished, before a pull request or a hand-off. Always give the person the review's link.

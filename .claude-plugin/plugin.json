@@ -1,0 +1,19 @@
+{
+  "name": "mergecomplete",
+  "displayName": "mergecomplete",
+  "version": "1.0.0",
+  "description": "Ask your agent for a review of the work it just did: what changed, what's risky, and a link to read it. Made on your own machine, on the Claude plan you already pay for.",
+  "author": {
+    "name": "mergecomplete",
+    "url": "https://mergecomplete.com"
+  },
+  "homepage": "https://docs.mergecomplete.com",
+  "repository": "https://github.com/mergecomplete/plugin",
+  "license": "MIT",
+  "keywords": [
+    "code-review",
+    "review",
+    "pull-request",
+    "mcp"
+  ]
+}

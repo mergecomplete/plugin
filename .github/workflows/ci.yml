@@ -1,0 +1,119 @@
+# The plugin's checks: its files agree, each agent's validator accepts them,
+# and the server starts and answers on every platform, including the ones
+# with no runner.
+#
+# Nothing here installs a runner from the app, so CI never downloads from
+# production or counts as an install there: that path is tested by hand
+# before a release.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "24"
+  GO_VERSION: "1.25.14"
+
+jobs:
+  files:
+    name: Files agree and validate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: The manifests and MCP files agree
+        run: node scripts/check.mjs
+      - name: The manifests match their formats' schemas
+        run: |
+          npm install --no-save --no-package-lock ajv@8 ajv-formats@3
+          node scripts/schemas.mjs
+      - name: Claude Code validates the plugin
+        # The root run checks the marketplace; the manifest's run checks the
+        # skills and .mcp.json, which the root run skips.
+        run: |
+          npm install --global @anthropic-ai/claude-code
+          claude plugin validate --strict .
+          claude plugin validate --strict .claude-plugin/plugin.json
+      - name: shellcheck
+        run: shellcheck -s sh bin/mergecomplete-mcp scripts/build-windows.sh
+
+  fallback:
+    name: No-runner server (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: A Windows shell, faked
+        run: |
+          mkdir -p "$RUNNER_TEMP/windows" "$RUNNER_TEMP/home-windows"
+          printf '#!/bin/sh\ncase "$1" in -m) echo x86_64 ;; *) echo MINGW64_NT-10.0-26100 ;; esac\n' > "$RUNNER_TEMP/windows/uname"
+          chmod +x "$RUNNER_TEMP/windows/uname"
+          PATH="$RUNNER_TEMP/windows:$PATH" HOME="$RUNNER_TEMP/home-windows" \
+            node scripts/smoke.mjs --every-tool "no runner for Windows"
+      - name: An architecture with no build, faked
+        run: |
+          mkdir -p "$RUNNER_TEMP/i686" "$RUNNER_TEMP/home-i686"
+          printf '#!/bin/sh\ncase "$1" in -m) echo i686 ;; *) echo Linux ;; esac\n' > "$RUNNER_TEMP/i686/uname"
+          chmod +x "$RUNNER_TEMP/i686/uname"
+          PATH="$RUNNER_TEMP/i686:$PATH" HOME="$RUNNER_TEMP/home-i686" \
+            node scripts/smoke.mjs --every-tool "it's i686"
+      # The launcher answers initialize before it installs, and the fallback
+      # takes over at the first tool call.
+      - name: An app the install can't reach
+        run: |
+          mkdir -p "$RUNNER_TEMP/home-offline"
+          HOME="$RUNNER_TEMP/home-offline" MERGECOMPLETE_URL=http://127.0.0.1:9 \
+            node scripts/smoke.mjs --every-tool "couldn't download the install script from http://127.0.0.1:9"
+          test ! -e "$RUNNER_TEMP/home-offline/.local/bin/mergecomplete"
+      - name: No HOME
+        run: |
+          env -i PATH="$PATH" node scripts/smoke.mjs --every-tool "no HOME set"
+
+  windows:
+    name: Windows starts the .exe
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # Started as bin/mergecomplete-mcp, with no extension, as every manifest
+      # starts it: this is the check that an agent on Windows finds the .exe.
+      - name: The server answers every tool
+        run: node scripts/smoke.mjs --every-tool "no runner for Windows"
+
+  windows-build:
+    name: The .exe is what its source builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache: false
+      - name: Vet
+        working-directory: fallback
+        run: |
+          test -z "$(gofmt -l .)"
+          go vet .
+      - name: Build it again and compare
+        run: |
+          scripts/build-windows.sh
+          if ! git diff --quiet -- bin/mergecomplete-mcp.exe; then
+            echo "bin/mergecomplete-mcp.exe differs from what fallback/ builds. Run scripts/build-windows.sh and commit it." >&2
+            exit 1
+          fi
