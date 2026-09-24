@@ -4,6 +4,8 @@ Every change to the plugin is recorded here. The format is [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-24
+
 ### Changed
 
 - Clearer messages when the plugin can't install or upgrade the runner, and the skills say the same thing about them in the same words.
@@ -20,5 +22,6 @@ Every change to the plugin is recorded here. The format is [Keep a Changelog](ht
 - A launcher that uses the runner already on your machine, or installs it into `~/.local/bin` when there isn't one.
 - On a machine the runner has no build for, every review tool answers that there's no runner for this machine, instead of the plugin failing to start.
 
-[Unreleased]: https://github.com/mergecomplete/plugin/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/mergecomplete/plugin/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/mergecomplete/plugin/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mergecomplete/plugin/releases/tag/v1.0.0
