@@ -19,7 +19,7 @@ Call `status`.
 
 - **"Connected to <app> as @<login>, on <machine>. ..."** The runner is connected. Go to step 2.
 - **"Give the person this code and link to connect the runner: <code> at <url>. ..."** Give the person the code and the link, exactly as given. They open the link, sign in with GitHub, and approve the code. Wait until they say they've approved it, then call `status` again. While the code is waiting, `status` gives the same one. If it gives a different code, the first one expired: give the person the new code and link.
-- **"The runner has a token for <app>, and the app didn't answer it: ..."** The app didn't answer. Tell the person what it said, and call `status` again in a minute.
+- **"The runner has a token for <app>, and the app didn't answer it: ..."** The app couldn't check the runner's token. Tell the person what it said, and call `status` again in a minute.
 
 ## 2. Check Claude Code is signed in
 
@@ -75,4 +75,4 @@ Tell the person in a sentence or two what's set up. Then go back to what they as
 ## When the runner can't start
 
 - **A tool answers that there's no runner for Windows, or for this machine, yet.** The runner has no build for it. It's built for macOS and Linux. On Windows, the Linux build runs inside WSL, with the agent started inside WSL too. Tell the person that, and stop. Don't try to install anything.
-- **A tool answers that the plugin couldn't install, upgrade or start the runner,** and ends by saying the plugin tries again when the agent next starts it. That's usually passing, such as the app not answering. Tell the person what it said, in its own words, and that it's tried again the next time the agent starts, such as in a new session. Every tool gives the same answer until then, so don't call it again, and don't install anything by hand.
+- **A tool answers that the plugin couldn't install, upgrade or start the runner.** That's usually temporary, such as the app not answering. Tell the person what it said, in its own words. The plugin tries again the next time the agent starts, such as in a new session, and until then every tool gives the same answer, so don't call it again, and don't install anything by hand.

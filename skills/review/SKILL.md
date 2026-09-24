@@ -64,5 +64,5 @@ Whatever you did with the findings, give the person the review's link. The revie
 
 - **"The runner isn't connected to the app yet. Call status to connect it."** Follow the setup skill, then ask for the review again.
 - **An answer that there's no runner for Windows, or for this machine, yet.** The runner has no build for this machine. Tell the person the review can't be made here, in the answer's words, and stop. Don't try to install anything.
-- **An answer that the plugin couldn't install, upgrade or start the runner,** which ends by saying the plugin tries again when the agent next starts it. Nothing is wrong with the change. Tell the person what it said, in its own words, and that it's tried again the next time the agent starts, such as in a new session. Every tool gives the same answer until then, so don't call it again, and don't install anything by hand.
+- **An answer that the plugin couldn't install, upgrade or start the runner.** Nothing is wrong with the change. Tell the person what it said, in its own words. The plugin tries again the next time the agent starts, such as in a new session, and until then every tool gives the same answer, so don't call it again, and don't install anything by hand.
 - **Any other error,** such as "GitHub has no pull request ..." Tell the person what it said, and check the `change` and `repo` you passed.
