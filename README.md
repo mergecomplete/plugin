@@ -2,7 +2,7 @@
 
 This plugin lets your coding agent ask for a review of the work it just did. The review explains the change so the next person can follow it quickly, and flags what's risky before they read it. Your agent reads what it found, weighs it, and gives you the review's link.
 
-It installs in Claude Code, Codex and Cursor. The review itself is made by the mergecomplete runner, on your machine and your Claude plan.
+It installs in Claude Code, Codex and Cursor. The mergecomplete runner makes the review itself, on your machine and your Claude plan.
 
 ## What it adds to your agent
 
@@ -19,6 +19,13 @@ In Claude Code the skills are also slash commands: `/mergecomplete:review`, `/me
 ### Claude Code
 
 Add this repository as a marketplace, then install the plugin from it:
+
+```sh
+claude plugin marketplace add mergecomplete/plugin
+claude plugin install mergecomplete@mergecomplete
+```
+
+Inside a session, the same two steps are slash commands, run one at a time:
 
 ```text
 /plugin marketplace add mergecomplete/plugin
