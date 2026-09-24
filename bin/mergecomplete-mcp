@@ -181,7 +181,7 @@ install_runner() {
 	fetched=$?
 	if [ $fetched -ne 0 ]; then
 		if [ $fetched -eq 127 ]; then
-			give_up "There's no runner on this machine, and the plugin couldn't install one: that takes curl or wget, and neither is installed."
+			give_up "There's no runner on this machine, and the plugin couldn't install one: that takes curl or wget, and neither is installed. Install either, and the plugin tries again when the agent next starts it."
 		fi
 		cat "$work/err" >&2
 		detail=$(last_line "$work/err")
@@ -234,18 +234,18 @@ install_runner() {
 upgrade_runner() {
 	version=$(version_of "$1")
 	if pinned; then
-		give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and MERGECOMPLETE_AUTO_UPDATE=0 pins it, so the plugin left it as it is. Upgrading it with mergecomplete upgrade in a terminal brings the tools."
+		give_up "The runner at $1, version ${version:-unknown}, doesn't have the review tools yet, and MERGECOMPLETE_AUTO_UPDATE=0 keeps it at that version, so the plugin left it as it is. Run mergecomplete upgrade in a terminal to get them."
 	fi
-	log "The runner at $1, version ${version:-unknown}, is older than the review tools, so upgrading it."
+	log "The runner at $1, version ${version:-unknown}, doesn't have the review tools yet, so upgrading it."
 	"$1" upgrade </dev/null >"$state/upgrade" 2>&1
 	upgraded=$?
 	cat "$state/upgrade" >&2
 	if ! has_mcp "$1"; then
 		detail=$(last_line "$state/upgrade")
 		if [ $upgraded -eq 0 ]; then
-			give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and the app it comes from has no newer runner with them yet. The plugin checks again when the agent next starts it."
+			give_up "The runner at $1, version ${version:-unknown}, doesn't have the review tools yet, and the app it comes from has no newer runner that does. The plugin checks again when the agent next starts it."
 		fi
-		give_up "The runner at $1, version ${version:-unknown}, is older than the review tools, and upgrading it didn't work${detail:+: $detail}. The plugin tries again when the agent next starts it."
+		give_up "The runner at $1, version ${version:-unknown}, doesn't have the review tools yet, and upgrading it didn't work${detail:+: $detail}. The plugin tries again when the agent next starts it."
 	fi
 	log "Upgraded the runner at $1 to version $(version_of "$1")."
 }
