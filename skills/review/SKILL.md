@@ -1,11 +1,11 @@
 ---
 name: review
-description: Ask for a review of finished work, for the person who reads it next. Use it before opening a pull request, before a commit someone else will read, or before telling the person a piece of work is finished and ready for someone else to read, and whenever the person asks for a review of a change, a branch, a commit or a pull request. Don't use it on your own after every edit, or for a small change the person will read themselves in the session. Each review takes about six minutes once it starts, on the person's own Claude plan.
+description: Ask for a review of finished work, for the person who reads it next. Use it before opening a pull request, before a commit someone else will read, or before telling the person a piece of work is finished and ready for someone else to read, and whenever the person asks for a review of a change, a branch, a commit or a pull request. Don't use it on your own after every edit, or for a small change the person will read themselves in the session. Each review takes about six minutes once it starts, on the person's own Claude or Cursor plan.
 ---
 
 # Reviewing a change
 
-A review explains a change so someone else can follow it quickly, and flags what's risky before they read it. The person's own runner makes it, on their machine and their Claude plan. It takes about six minutes once it starts, and about $1.50 of that plan.
+A review explains a change so someone else can follow it quickly, and flags what's risky before they read it. The person's own runner makes it, on their machine and their Claude or Cursor plan. It takes about six minutes once it starts, and about $1.50 of a Claude plan, or a review's worth of a Cursor plan.
 
 So ask for one when a piece of work is finished and someone else will read it next:
 

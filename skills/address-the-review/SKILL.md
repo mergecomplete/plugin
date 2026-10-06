@@ -12,7 +12,7 @@ A review names what's risky in a change, with the files and lines each risk is a
 1. Call `read_review`. Pass `review` as the review's link, a pull request's number or link, or a commit. When it's a number or a commit, also pass `repo` as the absolute path of the workspace you're working in.
    - If the person names no pull request and means the current branch's, find its number. `list_changes`, with the same `repo`, lists open pull requests, each with its number as `change`.
 2. The answer starts with the review's link, then its headline, its risks and its threads. Read all of it.
-3. If it answers "No review of that is here to read. Ask for one with the review tool.", tell the person there's no review of it they can read yet. Offer to ask for one with the review skill: it takes about six minutes once it starts, and about $1.50 of their Claude plan. Ask for it only if they agree.
+3. If it answers "No review of that is here to read. Ask for one with the review tool.", tell the person there's no review of it they can read yet. Offer to ask for one with the review skill: it takes about six minutes once it starts, and about $1.50 of their Claude plan, or a review's worth of their Cursor plan. Ask for it only if they agree.
 
 ## Going through the risks
 

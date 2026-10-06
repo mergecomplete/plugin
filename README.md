@@ -2,14 +2,14 @@
 
 This plugin lets your coding agent ask for a review of the work it just did. The review explains the change so the next person can follow it quickly, and flags what's risky before they read it. Your agent reads what it found, weighs it, and gives you the review's link.
 
-It installs in Claude Code, Codex and Cursor. The mergecomplete runner makes the review itself, on your machine and your Claude plan.
+It installs in Claude Code, Codex and Cursor. The mergecomplete runner makes the review itself, on your machine and your Claude or Cursor plan.
 
 ## What it adds to your agent
 
 - **Three skills,** which tell the agent when and how to use the review tools:
   - **review:** asks for a review of finished work, before a pull request, a commit someone else will read, or saying it's done. Not after every edit.
   - **address-the-review:** reads a review that's already made and goes through its risks with you. It changes nothing until you agree.
-  - **setup:** connects the runner, checks Claude Code is signed in, and offers background reviews.
+  - **setup:** connects the runner, checks Claude Code or Cursor is signed in, and offers background reviews.
 - **The review tools,** served by the runner over MCP: ask for a review, wait for it, read one, list what can be reviewed, and check the setup.
 
 In Claude Code the skills are also slash commands: `/mergecomplete:review`, `/mergecomplete:address-the-review` and `/mergecomplete:setup`.
@@ -69,7 +69,7 @@ After that, each time your agent starts the plugin, the launcher upgrades the ru
 Ask your agent to set up mergecomplete, or run `/mergecomplete:setup` in Claude Code. The agent does the checking, and asks you for what only you can do:
 
 1. It gives you a code and a link. Open the link, sign in with GitHub, approve the code, and tell the agent you've approved it.
-2. It checks Claude Code is installed and signed in, since Claude Code writes the review.
+2. It checks Claude Code or Cursor is installed and signed in, since one of them writes the review.
 3. It offers background reviews. With them on, a review your agent asks for is made outside its session, and each pull request you open on a repo the [GitHub App](https://docs.mergecomplete.com/start/github-app/) covers gets a review. You can say no, and your agent's reviews are then made in its session.
 
 When a review tool answers that the runner isn't connected, the agent runs setup by itself.
@@ -82,9 +82,9 @@ The agent also asks for a review by itself when a piece of work is finished, bef
 
 ## What a review costs
 
-A review runs on your machine, on the Claude plan you already have. It takes about six minutes once it starts, and about $1.50 of your plan. That figure is what the tokens would cost at API list prices, the number to hold against your plan's allowance. Nobody bills it ([What a review costs](https://docs.mergecomplete.com/making/cost/)). The budget you set in **Settings** applies to each review.
+A review runs on your machine, on the Claude or Cursor plan you already have. It takes about six minutes once it starts, and about $1.50 of your Claude plan, or a review's worth of your Cursor plan. That figure is what the tokens would cost at API list prices, the number to hold against your plan's allowance. Nobody bills it ([What a review costs](https://docs.mergecomplete.com/making/cost/)). The budget you set in **Settings** applies to each Claude Code review.
 
-In Codex and Cursor too, Claude Code makes the review and your Claude plan pays for it, not your Codex or Cursor plan. Claude Code needs to be installed and signed in on the machine.
+Claude Code or Cursor makes the review, whichever agent asks for it, on that one's plan. On a machine with both, **Review engine** in Settings chooses. In Codex, Claude Code or Cursor still needs to be installed and signed in on the machine.
 
 ## When there's no runner for your machine
 
