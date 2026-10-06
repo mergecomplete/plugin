@@ -4,6 +4,13 @@ Every change to the plugin is recorded here. The format is [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-10-06
+
+### Changed
+
+- Cursor can make your reviews as well as Claude Code. Setup checks for either, and on a machine with both, Settings chooses which.
+- The listing says reviews run on the Claude or Cursor plan you already pay for.
+
 ## [1.0.1] - 2026-09-24
 
 ### Changed
