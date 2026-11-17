@@ -54,7 +54,7 @@
       "readOnlyHint": false,
       "title": "Ask for a review"
     },
-    "description": "Ask for a review of a change, for the person who will read it next. A review explains the change so someone else can follow it quickly, and flags what's risky before they read it. It is made in the background by the person's runner, takes about six minutes once it starts, and uses about $1.50 of their Claude plan, or a review's worth of their Cursor plan, so ask when a piece of work is finished, before a pull request or a hand-off, not after every edit. With no change named it reviews the work in progress: uncommitted files and the branch's commits since its base, as they are right now. It returns at once with a job; call review_result to wait for it.",
+    "description": "Ask for a review of a change, for the person who will read it next. A review explains the change so someone else can follow it quickly, and flags what's risky before they read it. It is made in the background by the person's runner, takes about six minutes once it starts, and uses about $1.50 of their Claude plan, or a review's worth of their Cursor or ChatGPT plan, so ask when a piece of work is finished, before a pull request or a hand-off, not after every edit. With no change named it reviews the work in progress: uncommitted files and the branch's commits since its base, as they are right now. It returns at once with a job; call review_result to wait for it.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {
@@ -68,6 +68,10 @@
         },
         "repo": {
           "description": "Any path inside the checkout. Defaults to the directory the agent started in.",
+          "type": "string"
+        },
+        "reviewer": {
+          "description": "What reviews it, for this review only: \"different\" for a model from a different provider than the one that wrote the change, an engine (claude-code, cursor or codex), or an engine and a model family, as in \"cursor:gpt-sol\". Leave it out for the person's own choice, which is right unless they asked for something else.",
           "type": "string"
         }
       },
@@ -105,7 +109,7 @@
       "readOnlyHint": true,
       "title": "Check the runner is set up"
     },
-    "description": "Check the runner is set up: whether it's connected to the app, whether the background service is on, whether Claude Code or Cursor is signed in, and its version. If it isn't connected, this starts connecting it and returns a code and a link for the person to approve.",
+    "description": "Check the runner is set up: whether it's connected to the app, whether the background service is on, whether Claude Code, Cursor or Codex is signed in, and its version. If it isn't connected, this starts connecting it and returns a code and a link for the person to approve.",
     "inputSchema": {
       "additionalProperties": false,
       "properties": {},
