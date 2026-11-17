@@ -1,14 +1,14 @@
 ---
 name: setup
-description: Set up the runner that makes reviews on this machine. Connect it to the app, check Claude Code or Cursor is signed in, and offer background reviews, in that order. Use it when a review tool answers that the runner isn't connected, when the person asks to set up or check their reviews, or before the first review on a machine.
+description: Set up the runner that makes reviews on this machine. Connect it to the app, check Claude Code, Cursor or Codex is signed in, and offer background reviews, in that order. Use it when a review tool answers that the runner isn't connected, when the person asks to set up or check their reviews, or before the first review on a machine.
 ---
 
 # Setting up the runner
 
-The runner makes reviews on the person's machine, with their Claude or Cursor plan. Before it can, three things need to hold, and this skill checks them in order:
+The runner makes reviews on the person's machine, with their Claude, Cursor or ChatGPT plan. Before it can, three things need to hold, and this skill checks them in order:
 
 1. The runner is connected to the app, as the person.
-2. Claude Code or Cursor is installed and signed in, since one of them writes the review.
+2. Claude Code, Cursor or Codex is installed and signed in, since one of them writes the review.
 3. Background reviews are on, or the person has chosen to leave them off.
 
 Each step starts from the `status` tool. It takes no arguments.
@@ -21,22 +21,23 @@ Call `status`.
 - **"Give the person this code and link to connect the runner: <code> at <url>. ..."** Give the person the code and the link, exactly as given. They open the link, sign in with GitHub, and approve the code. Wait until they say they've approved it, then call `status` again. While the code is waiting, `status` gives the same one. If it gives a different code, the first one expired: give the person the new code and link.
 - **"The runner has a token for <app>, and the app didn't answer it: ..."** The app couldn't check the runner's token. Tell the person what it said, and call `status` again in a minute.
 
-## 2. Check Claude Code or Cursor is signed in
+## 2. Check Claude Code, Cursor or Codex is signed in
 
-Read the Claude Code and Cursor states in `status`'s answer. The review needs one of them, signed in.
+Read the Claude Code, Cursor and Codex states in `status`'s answer. The review needs one of them, signed in.
 
-- **Either is signed in:** go to step 3.
-- **Installed but signed out:** offer to run its sign-in, `agent login` for Cursor or `claude` for Claude Code. It opens a browser, so the person finishes it there. Then call `status` again.
-- **Neither is found:** offer to install the one the person is already working in: Cursor's agent in Cursor, Claude Code in Claude Code, and in Codex, ask which they'd like. If they agree, run its installer in a terminal or your shell tool:
+- **Any of them is signed in:** go to step 3.
+- **Installed but signed out:** offer to run its sign-in: `agent login` for Cursor, `codex login` for Codex, or `claude` for Claude Code. It opens a browser, so the person finishes it there. Then call `status` again.
+- **None is found:** offer to install the one the person is already working in: Cursor's agent in Cursor, Claude Code in Claude Code, Codex in Codex. If they agree, run its installer in a terminal or your shell tool:
 
   ```sh
   curl https://cursor.com/install -fsS | bash      # Cursor
   curl -fsSL https://claude.ai/install.sh | bash   # Claude Code
+  npm install -g @openai/codex                     # Codex
   ```
 
-  Then ask them to sign in, with `agent login` for Cursor or by running `claude` once for Claude Code, and call `status` again.
+  Then ask them to sign in, with `agent login` for Cursor, `codex login` for Codex, or by running `claude` once for Claude Code, and call `status` again.
 
-Whichever agent asks for the review, Claude Code or Cursor writes it: the one the machine has, or with both, the one chosen under **Review engine** in Settings. The review uses that one's plan.
+Whichever agent asks for the review, Claude Code, Cursor or Codex writes it: the one the machine has, or with more than one, the one chosen under **Reviewer** in Settings. The review uses that one's plan.
 
 ## 3. Offer background reviews
 
@@ -45,8 +46,8 @@ Read the background service's state in `status`'s answer.
 - **On:** setup is done.
 - **Off or not installed:** offer to turn background reviews on. Tell the person, before they choose:
   - With them on, a review you ask for is made in the background, outside this session, so ending the session doesn't send it back to the queue.
-  - Each pull request they open on a repo the GitHub App covers, with a checkout on this machine, gets a review, on this machine with their Claude or Cursor plan. A repo the app doesn't cover yet gets one once they install the app on it: https://docs.mergecomplete.com/start/github-app/
-  - Turning them on also starts reviews of up to three of their open pull requests now. Each takes about six minutes once it starts, and about $1.50 of their Claude plan, or a review's worth of their Cursor plan.
+  - Each pull request they open on a repo the GitHub App covers, with a checkout on this machine, gets a review, on this machine with their Claude, Cursor or ChatGPT plan. A repo the app doesn't cover yet gets one once they install the app on it: https://docs.mergecomplete.com/start/github-app/
+  - Turning them on also starts reviews of up to three of their open pull requests now. Each takes about six minutes once it starts, and about $1.50 of their Claude plan, or a review's worth of their Cursor or ChatGPT plan.
 
   If they agree, run this in a terminal or your shell tool:
 
