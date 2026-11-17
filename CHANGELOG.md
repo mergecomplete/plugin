@@ -4,6 +4,13 @@ Every change to the plugin is recorded here. The format is [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-17
+
+### Changed
+
+- Codex can make your reviews too, on your ChatGPT plan. Setup checks for it, and offers to install it and sign you in.
+- Settings' **Reviewer** chooses what makes the review, where it was **Review engine**.
+
 ## [1.1.1] - 2026-11-17
 
 ### Changed
