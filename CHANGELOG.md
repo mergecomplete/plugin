@@ -4,6 +4,12 @@ Every change to the plugin is recorded here. The format is [Keep a Changelog](ht
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-11-17
+
+### Changed
+
+- While the plugin installs the runner, the tools it lists match the runner's: a review can name what reviews it, and Codex and your ChatGPT plan are included.
+
 ## [1.1.0] - 2026-10-06
 
 ### Changed
